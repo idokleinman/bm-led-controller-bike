@@ -155,70 +155,22 @@ void setup()
     pinMode(onboardLedPin, OUTPUT);
     pinMode(buttonPin, INPUT_PULLUP);
     
-    // pinMode(offlinePin, INPUT_PULLUP);
-    // if(digitalRead(offlinePin) == LOW) {
-    //     Particle.connect();
-    // }
-
     Serial.begin(9600);
     Serial.println("Hello - LED controller");
 
     // load settings from EEPROM
-    brightness = EEPROM.read(0);
-    if(brightness < 1)
-      brightness = 1;
-    else if(brightness > 255)
-      brightness = 255;
-
+    brightness = 128; 
+    
     FastLED.setBrightness(brightness);
     FastLED.setDither(brightness < 255);
 
-    patternIndex = EEPROM.read(1);
-    if(patternIndex < 0)
-      patternIndex = 0;
-    else if (patternIndex >= patternCount)
-      patternIndex = patternCount - 1;
-
-    r = EEPROM.read(2);
-    g = EEPROM.read(3);
-    b = EEPROM.read(4);
-
-    if(r == 0 && g == 0 && b == 0) {
-      r = 0;
-      g = 0;
-      b = 255;
-    }
-
+    patternIndex = 0;
+    
+    r = 0;
+    g = 0;
+    b = 255;
+    
     solidColor = CRGB(r, b, g);
-
-    uint8_t timezoneSign = EEPROM.read(5);
-    if(timezoneSign < 1)
-      timezone = -EEPROM.read(6);
-    else
-      timezone = EEPROM.read(6);
-
-    if(timezone < -12)
-      timezone = -12;
-    else if (power > 13)
-      timezone = 13;
-
-    flipClock = EEPROM.read(7);
-    if(flipClock < 0)
-      flipClock = 0;
-    else if (flipClock > 1)
-      flipClock = 1;
-
-    Particle.function("patternIndex", setPatternIndex); // sets the current pattern index, changes to the pattern with the specified index
-    Particle.function("variable", setVariable); // sets the value of a variable, args are name:value
-
-    Particle.variable("power", power);
-    Particle.variable("brightness", brightness);
-    Particle.variable("patternIndex", patternIndex);
-    Particle.variable("r", r);
-    Particle.variable("g", g);
-    Particle.variable("b", b);
-    Particle.variable("timezone", timezone);
-    Particle.variable("flipClock", flipClock);
 
     patternNames = "[";
     for(uint8_t i = 0; i < patternCount; i++)
@@ -241,29 +193,6 @@ boolean buttonPressed = false;
 
 void loop()
 {
-  /*
-  if (Particle.connected() && millis() - lastTimeSync > ONE_DAY_MILLIS) {
-    // Request time synchronization from the Spark Cloud
-    Particle.syncTime();
-    lastTimeSync = millis();
-  }
-
-  s++;
-  if (s==30) {
-    Serial.print("*");
-    s=0;
-  }
-*/
-  // Pattern setting button reading/debouncing
-//   int reading = digitalRead(buttonPin);
-//   if (reading != lastButtonState) {
-//     lastDebounceTime = millis();
-//   }
-//   if ((millis() - lastDebounceTime) > debounceDelay) {
-//     if (reading != buttonState) {
-//       buttonState = reading;
-
-
   buttonState = digitalRead(buttonPin);
 
   if ((buttonState == LOW) && (lastButtonState == HIGH)) {
@@ -308,7 +237,7 @@ void loop()
     if (patternIndex >= patternCount) {
         patternIndex = 0;
     }
-    EEPROM.write(1, patternIndex);
+    // EEPROM.write(1, patternIndex);
     Serial.println("Set Pattern to "+patterns[patternIndex].name);
   }
 
@@ -344,58 +273,6 @@ void loop()
   };
 }
 
-int setVariable(String args)
-{
-    if(args.startsWith("pwr:")) {
-        return setPower(args.substring(4));
-    }
-    else if (args.startsWith("brt:")) {
-        return setBrightness(args.substring(4));
-    }
-    else if (args.startsWith("r:")) {
-        r = parseByte(args.substring(2));
-        solidColor.r = r;
-        EEPROM.write(2, r);
-        patternIndex = patternCount - 1;
-        return r;
-    }
-    else if (args.startsWith("g:")) {
-        g = parseByte(args.substring(2));
-        solidColor.g = g;
-        EEPROM.write(3, g);
-        patternIndex = patternCount - 1;
-        return g;
-    }
-    else if (args.startsWith("b:")) {
-        b = parseByte(args.substring(2));
-        solidColor.b = b;
-        EEPROM.write(4, b);
-        patternIndex = patternCount - 1;
-        return b;
-    }
-    else if (args.startsWith("c:")) { // c:255,255,255
-      return setColor(args.substring(2));
-    }
-    else if (args.startsWith("tz:")) {
-        return setTimezone(args.substring(3));
-    }
-    else if (args.startsWith("flpclk:")) {
-        return setFlipClock(args.substring(7));
-    }
-
-    return -1;
-}
-
-int setPower(String args)
-{
-    power = args.toInt();
-    if(power < 0)
-        power = 0;
-    else if (power > 1)
-        power = 1;
-
-    return power;
-}
 
 int setBrightness(String args)
 {
@@ -408,71 +285,11 @@ int setBrightness(String args)
     FastLED.setBrightness(brightness);
     FastLED.setDither(brightness < 255);
 
-    EEPROM.write(0, brightness);
+    // EEPROM.write(0, brightness);
 
     return brightness;
 }
 
-int setColor(String args)
-{
-  char inputStr[12];
-  args.toCharArray(inputStr, 12);
-
-  char *p = strtok(inputStr, ",");
-  r = atoi(p);
-
-  p = strtok(NULL,",");
-  g = atoi(p);
-
-  p = strtok(NULL,",");
-  b = atoi(p);
-
-  p = strtok(NULL,",");
-
-  solidColor.r = r;
-  solidColor.g = g;
-  solidColor.b = b;
-
-  patternIndex = patternCount - 1;
-
-  EEPROM.write(2, r);
-  EEPROM.write(3, g);
-  EEPROM.write(4, b);
-
-  return 0;
-}
-
-int setTimezone(String args)
-{
-    timezone = args.toInt();
-    if(timezone < -12)
-        power = -12;
-    else if (power > 13)
-        power = 13;
-
-    Time.zone(timezone);
-
-    if(timezone < 0)
-        EEPROM.write(5, 0);
-    else
-        EEPROM.write(5, 1);
-
-    EEPROM.write(6, abs(timezone));
-
-    return timezone;
-}
-
-int setFlipClock(String args) {
-    flipClock = args.toInt();
-    if(flipClock < 0)
-        flipClock = 0;
-    else if (flipClock > 1)
-        flipClock = 1;
-
-    EEPROM.write(7, flipClock);
-
-    return flipClock;
-}
 
 byte parseByte(String args) {
     int c = args.toInt();
@@ -484,18 +301,6 @@ byte parseByte(String args) {
     return c;
 }
 
-int setPatternIndex(String args)
-{
-    patternIndex = args.toInt();
-    if(patternIndex < 0)
-        patternIndex = 0;
-    else if (patternIndex >= patternCount)
-        patternIndex = patternCount - 1;
-
-    EEPROM.write(1, patternIndex);
-
-    return patternIndex;
-}
 
 // Patterns from FastLED example DemoReel100: https://github.com/FastLED/FastLED/blob/master/examples/DemoReel100/DemoReel100.ino
 
