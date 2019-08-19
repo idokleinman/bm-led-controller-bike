@@ -6,6 +6,7 @@
  * https://github.com/evilgeniuslabs/eclipse
  * Copyright (C) 2015 Jason Coon, Evil Genius Labs
  * Modified for Particle Photon by Ido Kleinman, 2019 for Burning Man LED controllers (c)
+ * Hardware: Particle Photon + Battery shield, Neo pixel strip, button
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,11 +45,13 @@ int buttonPin =	D3;	// Connect the button to GND and one of the pins.
 // int offlinePin = D7;
 int onboardLedPin = D7;
 
-const int brightnessLevelsArr[] = {0, 48, 128, 255};
+const int brightnessLevelsArr[] = {48, 96, 144, 255};
 int brightnessLevelsCount = ARRAY_SIZE(brightnessLevelsArr);
 
 int brightnessLevel = 0;
-int doublePressTime = 350;
+// unsigned long doublePressTime = 350;
+unsigned long patternChangeTime = 10000; // change pattern every 15 sec
+unsigned long longPressTime = 3000; // 3 sec press to shutdown
 
 #define COLOR_ORDER GRB  // Try mixing up the letters (RGB, GBR, BRG, etc) for a whole new world of color combinations
 
@@ -188,57 +191,60 @@ void setup()
 }
 
 int s = 0;
-int buttonTime = -1;
-boolean buttonPressed = false;
+unsigned long buttonTime = -1;
+unsigned long patternTime = -1;
+
+// boolean buttonPressed = false;
+boolean goToSleep = false;
 
 void loop()
 {
   buttonState = digitalRead(buttonPin);
 
+  // detected start of press
   if ((buttonState == LOW) && (lastButtonState == HIGH)) {
-    // double click detected
-    if (buttonPressed && ((millis() - buttonTime) < doublePressTime)) {
+    buttonTime = millis(); 
+  }
+
+  if (buttonState == LOW) {
+    if ((millis() - buttonTime) > longPressTime) {
+      Serial.println("Sleep");
+        // turn off the LEDs
+      setBrightness(String(0));
+      FastLED.show();
+      goToSleep = true;
+    }
+  }
+  
+  if ((buttonState == HIGH) && (lastButtonState == LOW)) {
+    // that's a regular press 
+    if (goToSleep) { // end of a long press
+      setBrightness(String(0)); // make sure LEDs are off
+      FastLED.show();
+      // wake up with previous brightness
+      setBrightness(String(brightnessLevelsArr[brightnessLevel]));
+      goToSleep = false;
+      delay(100);
+      System.sleep(buttonPin,RISING); // TODO: change button to a pin that wakes up (D1, D2, D3, D4, A0, A1, A3, A4, A6, A7)
+    } else {
       brightnessLevel++;
       if (brightnessLevel >= brightnessLevelsCount) {
         brightnessLevel = 0;
       }
       int newBrightness = brightnessLevelsArr[brightnessLevel];
       setBrightness(String(newBrightness));
-      Serial.println("Set brightness to "+String(newBrightness));
-      buttonPressed = false;
-
-      if (newBrightness == 0) {
-        Serial.println("Sleep");
-        // turn off the LEDs
-        FastLED.show();
-        // set wake up brightness
-        brightnessLevel++;
-        if (brightnessLevel >= brightnessLevelsCount) {
-          brightnessLevel = 0;
-        }
-        newBrightness = brightnessLevelsArr[brightnessLevel];
-        setBrightness(String(newBrightness));
-        delay(100);
-        // sleep and set to wake up with the button
-        System.sleep(buttonPin,RISING); // TODO: change button to a pin that wakes up (D1, D2, D3, D4, A0, A1, A3, A4, A6, A7)
-      }
-      
-    } else if (!buttonPressed) {
-      buttonPressed = true;
-      // start timer and cancel it if second press detected
-      buttonTime = millis();
+      Serial.println("Set brightness to "+String(newBrightness)); 
     }
   }
 
-  if (buttonPressed && ((millis() - buttonTime) > doublePressTime)) {
-    // that's a single press 
-    buttonPressed = false;
+  if ((millis() - patternTime) > patternChangeTime) {
     patternIndex++;
     if (patternIndex >= patternCount) {
         patternIndex = 0;
     }
     // EEPROM.write(1, patternIndex);
-    Serial.println("Set Pattern to "+patterns[patternIndex].name);
+    Serial.println("Pattern is "+patterns[patternIndex].name);
+    patternTime = millis();   
   }
 
   lastButtonState = buttonState;
