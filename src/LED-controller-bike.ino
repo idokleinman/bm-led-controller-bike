@@ -69,23 +69,23 @@ typedef PatternAndName PatternAndNameList[];
 
 const PatternAndNameList patterns =
 {
-  // { pride,                  "Pride" },
-  // { colorWaves,             "Color Waves" },
+  { colorWaves,             "Color Waves" },
+  { pride,                  "Pride" },
   // { rainbowTwinkles,        "Rainbow Twinkles" },
   // { snowTwinkles,           "Snow Twinkles" },
   // { cloudTwinkles,          "Cloud Twinkles" },
   // { incandescentTwinkles,   "Incandescent Twinkles" },
-  { rainbow,                "Rainbow" },
+  // { rainbow,                "Rainbow" },
   { rainbowWithGlitter,     "Rainbow With Glitter" },
   // { rainbowSolid,           "Solid Rainbow" },
   // { confetti,               "Confetti" },
   { sinelon,                "Sinelon" },
-  { bpm,                    "Beat" },
   { juggle,                 "Juggle" },
   { meteorShower,           "Meteor Shower" },
   { juggle2,                "Juggle 2" },
-  { fire,                   "Fire" },
+  { bpm,                    "Beat" },
   { water,                  "Water" },
+  { fire,                   "Fire" },
   // { analogClock,            "Analog Clock" },
   // { showSolidColor,         "Solid Color" }
 };
